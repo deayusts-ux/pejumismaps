@@ -163,11 +163,17 @@ function App() {
     };
   }, [isSharing]);
 
-  // Ref untuk akses lokasi terkini di dalam event listener MQTT
+  // Ref untuk akses lokasi dan nama terkini di dalam event listener MQTT
   const userLocationRef = useRef(null);
+  const userNameRef = useRef(userName);
+
   useEffect(() => {
     userLocationRef.current = userLocation;
   }, [userLocation]);
+
+  useEffect(() => {
+    userNameRef.current = userName;
+  }, [userName]);
 
   // MQTT Connection & Handling
   useEffect(() => {
@@ -204,10 +210,11 @@ function App() {
         if (!err) {
           console.log(`Subscribed to zenmap/${roomId}/#`);
           // FAST JOIN: Announce presence immediately!
+          const nameToSend = userNameRef.current || 'User ' + myId.substr(-4);
           const joinPayload = JSON.stringify({
             type: 'join',
             id: myId,
-            name: userName || 'User ' + myId.substr(-4)
+            name: nameToSend
           });
           mqttClient.publish(`zenmap/${roomId}/${myId}`, joinPayload, { qos: 0 });
         } else {
@@ -245,10 +252,11 @@ function App() {
         // If someone new joins, immediately send them my location!
         if (payload.type === 'join') {
           if (userLocationRef.current) {
+            const nameToSend = userNameRef.current || 'User ' + myId.substr(-4);
             const replyPayload = JSON.stringify({
               lat: userLocationRef.current.lat,
               lng: userLocationRef.current.lng,
-              name: userName || 'User ' + myId.substr(-4),
+              name: nameToSend,
               avatarSeed: myId
             });
             // Publish immediately (response)
@@ -298,7 +306,7 @@ function App() {
     return () => {
       if (mqttClient) mqttClient.end();
     };
-  }, [myId, roomId, userName]); // Added userName to deps
+  }, [myId, roomId]);
 
   // Publish Location Updates
   useEffect(() => {
