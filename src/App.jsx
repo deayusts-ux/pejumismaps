@@ -783,15 +783,18 @@ function App() {
                 })}
               >
                 <Popup>
-                  <div className="text-black font-sans min-w-[150px]">
-                    <div class="flex items-center gap-2 mb-2">
-                      <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf" class="w-8 h-8 rounded-full bg-gray-100" />
+                  <div
+                    className="text-black font-sans min-w-[150px] cursor-pointer hover:bg-gray-50 p-1 rounded-lg transition-colors"
+                    onClick={() => setSelectedUserProfile({ id, ...user })}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} className="w-8 h-8 rounded-full bg-gray-100" />
                       <div>
-                        <strong class="block text-sm leading-tight">${user.name}</strong>
-                        <span className="text-orange-500 font-bold text-[10px] uppercase tracking-wider">Live Tracking</span>
+                        <strong className="block text-sm leading-tight text-blue-600 hover:underline">{user.name}</strong>
+                        <span className="text-orange-500 font-bold text-[10px] uppercase tracking-wider">Click to view profile</span>
                       </div>
                     </div>
-                    <div class="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500">
                       Updated: just now
                     </div>
                   </div>
@@ -1012,7 +1015,26 @@ function App() {
                     {chatMessages.map((msg, idx) => (
                       <div key={idx} className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                         <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.isMe ? 'bg-primary text-white rounded-br-none shadow-glow-primary' : 'bg-white/10 text-white rounded-bl-none border border-white/5'}`}>
-                          {!msg.isMe && <div className="text-[10px] text-accent-lime font-bold mb-1 opacity-80">{msg.name}</div>}
+                          {!msg.isMe && (
+                            <div
+                              className="text-[10px] text-accent-lime font-bold mb-1 opacity-80 cursor-pointer hover:underline"
+                              onClick={() => {
+                                const user = otherUsers[msg.senderId];
+                                if (user) {
+                                  setSelectedUserProfile({ id: msg.senderId, ...user });
+                                } else {
+                                  // Fallback if user left or not in list
+                                  setSelectedUserProfile({
+                                    id: msg.senderId,
+                                    name: msg.name,
+                                    avatarSeed: msg.senderId || 'unknown'
+                                  });
+                                }
+                              }}
+                            >
+                              {msg.name}
+                            </div>
+                          )}
                           {msg.text}
                         </div>
                         <span className="text-[10px] text-white/20 mt-1 px-1">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
