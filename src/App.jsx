@@ -422,6 +422,7 @@ function App() {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           setZoom(17);
+          setShouldFollowUser(true); // Re-enable following
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -435,11 +436,60 @@ function App() {
     }
   };
 
-  const MapUpdater = ({ center, zoom }) => {
+  const [shouldFollowUser, setShouldFollowUser] = useState(true);
+
+  // Stop following when user interacts with map
+  const onMapDragStart = () => {
+    setShouldFollowUser(false);
+  };
+
+  // Helper component to listen to map events
+  const EventComponent = ({ onDragStart }) => {
     const map = useMap();
     useEffect(() => {
-      map.setView(center, zoom);
+      map.on('dragstart', onDragStart);
+      map.on('zoomstart', onDragStart); // Also stop following on manual zoom
+      return () => {
+        map.off('dragstart', onDragStart);
+        map.off('zoomstart', onDragStart);
+      };
+    }, [map, onDragStart]);
+    return null;
+  };
+
+  const MapUpdater = ({ center, zoom }) => {
+    const map = useMap();
+
+    // Invalidate size on mount/resize to prevent grey tiles
+    useEffect(() => {
+      map.invalidateSize();
+    }, [map]);
+
+    // Use flyTo for smoother transitions, but ONLY when center changes significantly or forcibly requested
+    // Removing the forced setView on every render allows the user to drag freely without snapping back!
+    // We only move the map if the USER location changes significantly (e.g. from GPS update) OR initial load.
+    // However, if we want to follow the user, we should have a "follow mode".
+    // For now, let's just make sure we pan smoothly if we DO move.
+    useEffect(() => {
+      // Optional: Only move if distance is significant or it's a "re-center" event
+      // For basic smoothness, just using flyTo instead of setView helps, 
+      // BUT calling this on every render/state update causes the "jitter" during drag.
+      // We should NOT controlled-component the map center if we want free dragging.
+      // The center prop in MapContainer is initial only. 
+      // We will use a separate effect for explicit moves (like "Recenter" button).
     }, [center, zoom, map]);
+
+    return null;
+  };
+
+  // New Hook for manual view control
+  const MapController = ({ center, zoom, shouldFollow }) => {
+    const map = useMap();
+    useEffect(() => {
+      if (shouldFollow) {
+        map.flyTo(center, zoom, { duration: 1.5 });
+      }
+    }, [center, zoom, map, shouldFollow]);
     return null;
   };
 
@@ -746,7 +796,8 @@ function App() {
             className="absolute inset-0 w-full h-full z-0"
             style={{ height: "100%", width: "100%" }}
           >
-            <MapUpdater center={[userLocation.lat, userLocation.lng]} zoom={zoom} />
+            <MapController center={[userLocation.lat, userLocation.lng]} zoom={zoom} shouldFollow={shouldFollowUser} />
+            <EventComponent onDragStart={onMapDragStart} />
 
             {/* Esri World Imagery (Satellite) */}
             <TileLayer
