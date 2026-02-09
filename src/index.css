@@ -21,6 +21,28 @@
     --shadow-input-glow: 0 0 15px rgba(43, 140, 238, 0.15);
 }
 
+@layer utilities {
+    .map-grid-bg {
+        background-image:
+            linear-gradient(rgba(43, 140, 238, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(43, 140, 238, 0.05) 1px, transparent 1px);
+        background-size: 50px 50px;
+    }
+
+    .glass-effect {
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+
+    .neon-shadow {
+        box-shadow: 0 0 25px rgba(43, 140, 238, 0.35);
+    }
+
+    .sidebar-link-active {
+        @apply bg-primary/10 border-l-4 border-primary text-white;
+    }
+}
+
 .map-bg {
     background-color: #111a22;
     background-image:
@@ -166,7 +188,6 @@ body {
 
     to {
         transform: translateY(0);
-        opacity: 1;
     }
 }
 

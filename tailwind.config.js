@@ -14,8 +14,12 @@ export default {
                 "accent-lime": "#ccff00",
                 "accent-cyan": "#00ffff",
                 "map-dark": "#111a22",
-                "glass-dark": "rgba(17, 26, 34, 0.65)",
+                "glass-dark": "rgba(10, 14, 20, 0.8)", // Updated to match request
                 "glass-light": "rgba(255, 255, 255, 0.85)",
+                "background-light": "#f6f7f8",
+                "background-dark": "#0a0e14",
+                "glass": "rgba(43, 140, 238, 0.06)",
+                "glass-border": "rgba(43, 140, 238, 0.15)",
             },
             fontFamily: {
                 "display": ["Spline Sans", "sans-serif"]

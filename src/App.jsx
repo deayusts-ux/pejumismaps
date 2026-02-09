@@ -883,7 +883,7 @@ function App() {
                   className="p-2 rounded-full bg-white/5 hover:bg-white/20 text-white/60 hover:text-white transition-all flex items-center justify-center hover:rotate-90 duration-500 shadow-sm border border-white/5"
                   onClick={(e) => {
                     e.stopPropagation();
-                    showToast("Settings coming soon!", "info");
+                    setCurrentView('settings');
                   }}
                   title="Settings"
                 >
@@ -1125,16 +1125,162 @@ function App() {
                     <span className="material-symbols-outlined text-[20px]">mic</span>
                   </button>
                 </div>
-                <div className="absolute bottom-0 right-8 pointer-events-auto">
-                  <button className="h-16 px-8 rounded-full bg-primary hover:bg-blue-500 text-white flex items-center gap-3 shadow-glow active:scale-95 transition-all font-semibold tracking-wide">
-                    <span className="material-symbols-outlined text-[28px]">person_add</span>
-                    <span>Add Friend</span>
-                  </button>
-                </div>
+
               </div>
             </div >
           </div >
         </div >
+      )}
+      {currentView === 'settings' && (
+        <div className="relative w-full h-full bg-background-dark overflow-hidden flex shadow-2xl border border-white/5 font-display text-slate-100">
+          {/* Background Effects */}
+          <div className="absolute inset-0 map-grid-bg pointer-events-none opacity-40"></div>
+          <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]"></div>
+
+          {/* Sidebar */}
+          <aside className="relative z-20 w-80 border-r border-glass-border glass-effect flex flex-col">
+            <div className="p-10">
+              <div className="flex items-center gap-3 mb-12">
+                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center neon-shadow">
+                  <span className="material-symbols-outlined text-white">explore</span>
+                </div>
+                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">PEJUMISMAPS</span>
+              </div>
+              <nav className="space-y-4">
+                <button
+                  onClick={() => setCurrentView('map')}
+                  className="w-full flex items-center gap-4 px-6 py-4 mb-8 text-slate-300 hover:text-white hover:bg-white/5 border border-glass-border rounded-xl transition-all group"
+                >
+                  <span className="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+                  <span className="font-bold tracking-wide uppercase text-sm">Back to Map</span>
+                </button>
+                <div className="h-px bg-glass-border mb-6"></div>
+                <button className="w-full sidebar-link-active flex items-center gap-4 px-6 py-4 rounded-r-xl transition-all text-left">
+                  <span className="material-symbols-outlined">person</span>
+                  <span className="font-medium">Account</span>
+                </button>
+              </nav>
+            </div>
+            <div className="mt-auto p-10">
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to logout?')) {
+                    localStorage.removeItem('zenmap_username');
+                    window.location.reload();
+                  }
+                }}
+                className="flex items-center gap-4 px-6 py-4 text-slate-500 hover:text-red-400 transition-all"
+              >
+                <span className="material-symbols-outlined">logout</span>
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="relative z-10 flex-1 overflow-y-auto bg-transparent flex flex-col hide-scrollbar">
+            <header className="flex items-center justify-between px-16 py-10">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">Profile Settings</h2>
+                <p className="text-slate-400">Manage your public identity and map preferences</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
+                  <span className="material-symbols-outlined text-white">search</span>
+                </div>
+                <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
+                  <span className="material-symbols-outlined text-white">dark_mode</span>
+                </div>
+              </div>
+            </header>
+
+            <div className="px-16 pb-16">
+              <div className="max-w-4xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
+                {/* Profile Card */}
+                <div className="flex flex-col items-center flex-shrink-0 w-full lg:w-auto">
+                  <div className="relative group">
+                    <div className="w-48 h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
+                      <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4')` }}></div>
+                    </div>
+                    <button className="absolute bottom-2 right-2 w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all">
+                      <span className="material-symbols-outlined text-2xl">photo_camera</span>
+                    </button>
+                  </div>
+                  <div className="mt-6 text-center">
+                    <h3 className="font-bold text-white text-lg">{userName || 'Anonymous'}</h3>
+                    <p className="text-primary text-sm font-semibold tracking-wider uppercase mt-1">Digital Explorer</p>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="flex-1 w-full space-y-8">
+                  <div className="grid grid-cols-1 gap-8">
+                    <div className="flex flex-col gap-3">
+                      <label className="px-2 text-sm font-medium text-slate-300">Display Name</label>
+                      <div className="relative flex items-center">
+                        <div className="absolute left-5 text-primary">
+                          <span className="material-symbols-outlined">person</span>
+                        </div>
+                        <input
+                          className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500"
+                          placeholder="Enter your display name"
+                          type="text"
+                          value={userName}
+                          onChange={(e) => setUserName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="px-2 text-sm font-medium text-slate-300">Bio</label>
+                      <div className="relative flex flex-col">
+                        <div className="absolute left-5 top-5 text-primary">
+                          <span className="material-symbols-outlined">description</span>
+                        </div>
+                        <textarea
+                          className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500 min-h-[160px] resize-none"
+                          placeholder="Share your story..."
+                          defaultValue="Digital nomad and urban explorer. Mapping the hidden gems of Northern Europe. #explorer #pejumis"
+                        ></textarea>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-glass border border-glass-border rounded-2xl glass-effect gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-primary">visibility</span>
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-white">Public Profile</p>
+                          <p className="text-sm text-slate-400">Allow others to see your maps and pins</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input defaultChecked className="sr-only peer" type="checkbox" />
+                        <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                      <button
+                        onClick={() => showToast("Profile changes saved!", "info")}
+                        className="px-10 py-5 bg-primary text-white font-bold rounded-2xl neon-shadow hover:bg-blue-400 active:scale-95 transition-all flex items-center justify-center gap-3"
+                      >
+                        <span className="material-symbols-outlined">save</span>
+                        Save Profile Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-16 right-16 opacity-[0.03] rotate-12 pointer-events-none select-none">
+              <span className="material-symbols-outlined text-[300px] text-primary">map</span>
+            </div>
+          </main>
+        </div>
       )}
 
       {/* Toast Notification Overlay */}
