@@ -854,7 +854,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="p-4 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer mx-2 mt-2 rounded-xl border border-white/5 bg-white/5">
+              <div className="p-4 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer mx-2 mt-2 rounded-xl border border-white/5 bg-white/5 group/card">
                 <div className={`relative size-12 rounded-full p-0.5 bg-gradient-to-tr ${isSharing ? 'from-accent-lime to-green-600 animate-pulse-slow' : 'from-gray-600 to-gray-800'}`}>
                   <img
                     alt="My Avatar"
@@ -867,16 +867,28 @@ function App() {
                     </div>
                   )}
                 </div>
-                <div>
-                  <div className="text-sm font-bold flex items-center gap-2 text-white">
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold flex items-center gap-2 text-white truncate">
                     {userName || 'Me'}
-                    <span className="text-[10px] bg-white/10 text-white/60 px-1.5 rounded uppercase tracking-wider border border-white/5">YOU</span>
+                    <span className="text-[10px] bg-white/10 text-white/60 px-1.5 rounded uppercase tracking-wider border border-white/5 shrink-0">YOU</span>
                   </div>
                   <div className={`text-xs mt-0.5 flex items-center gap-1 ${isSharing ? 'text-accent-lime' : 'text-white/40'}`}>
                     <span className={`size-1.5 rounded-full ${isSharing ? 'bg-accent-lime animate-ping' : 'bg-white/20'}`}></span>
                     {isSharing ? 'Broadcasting Location' : 'Location Hidden'}
                   </div>
                 </div>
+
+                <button
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/20 text-white/60 hover:text-white transition-all flex items-center justify-center hover:rotate-90 duration-500 shadow-sm border border-white/5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    showToast("Settings coming soon!", "info");
+                  }}
+                  title="Settings"
+                >
+                  <span className="material-symbols-outlined text-[20px]">settings</span>
+                </button>
               </div>
 
               {/* Connection Status Bar */}
