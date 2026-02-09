@@ -291,6 +291,9 @@ function App() {
         // Ignore if it's a system message not meant for state update (like kick)
         if (payload.type === 'kick') return;
 
+        // SAFETY CHECK: Ensure payload has valid coordinates to prevent Map Crash
+        if (!payload.lat || !payload.lng) return;
+
         setOtherUsers(prev => ({
           ...prev,
           [senderId]: {
