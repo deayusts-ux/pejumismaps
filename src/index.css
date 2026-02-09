@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #2b8cee;
+    --color-primary-hover: #1a75d1;
+    --color-accent-pink: #ff00d4;
+    --color-accent-lime: #ccff00;
+    --color-accent-cyan: #00ffff;
+    --color-map-dark: #111a22;
+    --color-glass-dark: rgba(17, 26, 34, 0.65);
+    --color-glass-medium: rgba(17, 26, 34, 0.85);
+    --color-glass-light: rgba(255, 255, 255, 0.85);
+    --color-card-dark: #1a2633;
+
+    --font-display: "Spline Sans", sans-serif;
+
+    --shadow-glow: 0 0 20px rgba(43, 140, 238, 0.6);
+    --shadow-glow-white: 0 0 20px rgba(255, 255, 255, 0.3);
+    --shadow-glow-pink: 0 0 15px rgba(255, 0, 212, 0.4);
+    --shadow-float: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    --shadow-input-glow: 0 0 15px rgba(43, 140, 238, 0.15);
+}
+
+.map-bg {
+    background-color: #111a22;
+    background-image:
+        radial-gradient(circle at 50% 50%, #1a2633 2px, transparent 2.5px),
+        linear-gradient(to right, #192633 1px, transparent 1px),
+        linear-gradient(to bottom, #192633 1px, transparent 1px);
+    background-size: 40px 40px, 80px 80px, 80px 80px;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    background-color: #1e3a5f;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+@keyframes float-slow {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-15px) rotate(1deg);
+    }
+}
+
+@keyframes float-reverse {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(10px) rotate(-1deg);
+    }
+}
+
+@keyframes spin-earth {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes spin-cloud {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 250% 0;
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.animate-float-slow {
+    animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+    animation: float-reverse 7s ease-in-out infinite;
+}
+
+.animate-spin-earth {
+    animation: spin-earth 60s linear infinite;
+}
+
+.animate-spin-cloud {
+    animation: spin-cloud 50s linear infinite;
+}
+
+.animate-float-delayed {
+    animation: float 7s ease-in-out 2s infinite;
+}
+
+body {
+    background-color: var(--color-map-dark);
+    margin: 0;
+    padding: 0;
+    min-height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    /* Prevent scrolling on body, let App handle it */
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+.custom-icon,
+.custom-user-icon,
+.custom-peer-icon {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Chat Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.animate-in {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+    animation-timing-function: ease-out;
+}
+
+.fade-in {
+    animation-name: fadeIn;
+}
+
+.slide-in-from-bottom-2 {
+    animation-name: slideInFromBottom;
+}
+
+.animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}
