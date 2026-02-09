@@ -1155,8 +1155,9 @@ function App() {
           <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]"></div>
           <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]"></div>
 
-          {/* Sidebar */}
-          <aside className="relative z-20 w-80 border-r border-glass-border glass-effect flex flex-col">
+          {/* Sidebar (Desktop) */}
+          {/* Sidebar (Desktop Only) */}
+          <aside className="hidden lg:flex relative z-20 w-80 border-r border-glass-border glass-effect flex-col">
             <div className="p-10">
               <div className="flex items-center gap-3 mb-12">
                 <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center neon-shadow">
@@ -1197,7 +1198,29 @@ function App() {
 
           {/* Main Content */}
           <main className="relative z-10 flex-1 overflow-y-auto bg-transparent flex flex-col hide-scrollbar">
-            <header className="flex items-center justify-between px-16 py-10">
+            {/* Mobile Navigation Header */}
+            <div className="lg:hidden flex items-center justify-between px-6 py-6 border-b border-glass-border bg-glass-dark backdrop-blur-md sticky top-0 z-30">
+              <button
+                onClick={() => setCurrentView('map')}
+                className="size-10 flex items-center justify-center rounded-full bg-white/5 text-white active:scale-95"
+              >
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+              <span className="font-bold text-lg">My Profile</span>
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to logout?')) {
+                    localStorage.removeItem('zenmap_username');
+                    window.location.reload();
+                  }
+                }}
+                className="size-10 flex items-center justify-center rounded-full bg-red-500/10 text-red-400 active:scale-95"
+              >
+                <span className="material-symbols-outlined">logout</span>
+              </button>
+            </div>
+
+            <header className="hidden lg:flex items-center justify-between px-16 py-10">
               <div>
                 <h2 className="text-3xl font-bold text-white mb-2">Profile Settings</h2>
                 <p className="text-slate-400">Manage your public identity and map preferences</p>
@@ -1210,19 +1233,19 @@ function App() {
               </div>
             </header>
 
-            <div className="px-16 pb-16">
-              <div className="max-w-4xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
+            <div className="px-6 py-6 lg:px-16 lg:pb-16">
+              <div className="max-w-4xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-16 items-start">
                 {/* Profile Card */}
                 <div className="flex flex-col items-center flex-shrink-0 w-full lg:w-auto">
                   <div className="relative group">
-                    <div className="w-48 h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
+                    <div className="w-32 h-32 lg:w-48 lg:h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
                       <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${profileImage || `https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}')` }}></div>
                     </div>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-2 right-2 w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all"
+                      className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 w-10 h-10 lg:w-12 lg:h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all"
                     >
-                      <span className="material-symbols-outlined text-2xl">photo_camera</span>
+                      <span className="material-symbols-outlined text-lg lg:text-2xl">photo_camera</span>
                     </button>
                     <input
                       type="file"
@@ -1232,7 +1255,7 @@ function App() {
                       onChange={handleImageUpload}
                     />
                   </div>
-                  <div className="mt-6 text-center">
+                  <div className="mt-4 lg:mt-6 text-center">
                     <h3 className="font-bold text-white text-lg">{userName || 'Anonymous'}</h3>
                     <p className="text-primary text-sm font-semibold tracking-wider uppercase mt-1">Digital Explorer</p>
                   </div>
@@ -1287,13 +1310,13 @@ function App() {
                       </label>
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-end pt-4 pb-20 lg:pb-0">
                       <button
                         onClick={() => showToast("Profile changes saved!", "info")}
-                        className="px-10 py-5 bg-primary text-white font-bold rounded-2xl neon-shadow hover:bg-blue-400 active:scale-95 transition-all flex items-center justify-center gap-3"
+                        className="w-full lg:w-auto px-10 py-4 lg:py-5 bg-primary text-white font-bold rounded-2xl neon-shadow hover:bg-blue-400 active:scale-95 transition-all flex items-center justify-center gap-3 sticky bottom-6 z-40 lg:relative lg:bottom-auto lg:z-auto shadow-xl lg:shadow-none"
                       >
                         <span className="material-symbols-outlined">save</span>
-                        Save Profile Changes
+                        Save Changes
                       </button>
                     </div>
                   </div>
