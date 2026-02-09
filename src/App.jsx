@@ -82,6 +82,13 @@ function App() {
   });
   const [client, setClient] = useState(null);
 
+  // Toast State
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, type = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Chat State
   const [chatMessages, setChatMessages] = useState([]);
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'chat'
@@ -1116,9 +1123,16 @@ function App() {
             </div >
           </div >
         </div >
-      )
-      }
-    </div >
+      )}
+
+      {/* Toast Notification Overlay */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-white/90 text-black'}`}>
+          <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'info'}</span>
+          <span className="font-medium">{toast.msg}</span>
+        </div>
+      )}
+    </div>
   )
 }
 
