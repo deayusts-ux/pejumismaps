@@ -106,6 +106,8 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const [selectedUserProfile, setSelectedUserProfile] = useState(null);
+
   // Chat State
   const [chatMessages, setChatMessages] = useState([]);
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'chat'
@@ -951,7 +953,11 @@ function App() {
                       </div>
                     ) : (
                       Object.entries(otherUsers).map(([id, user]) => (
-                        <div key={id} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group text-left border border-white/5 bg-white/5 mb-2 relative">
+                        <div
+                          key={id}
+                          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group text-left border border-white/5 bg-white/5 mb-2 relative cursor-pointer active:scale-[0.98]"
+                          onClick={() => setSelectedUserProfile({ id, ...user })}
+                        >
                           <div className="relative">
                             <div className="size-10 rounded-full p-0.5 bg-gradient-to-tr from-orange-400 to-red-500">
                               <img alt={user.name} className="w-full h-full rounded-full object-cover border border-[#111a22]" src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} />
@@ -1336,6 +1342,63 @@ function App() {
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-white/90 text-black'}`}>
           <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'info'}</span>
           <span className="font-medium">{toast.msg}</span>
+        </div>
+      )}
+
+      {/* Selected User Profile Modal */}
+      {selectedUserProfile && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setSelectedUserProfile(null)}>
+          <div className="bg-glass-dark border border-glass-border p-8 rounded-3xl max-w-sm w-full relative shadow-2xl scale-100 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedUserProfile(null)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-accent-lime to-green-600 mb-4 shadow-glow-sm">
+                <img
+                  src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${selectedUserProfile.avatarSeed}&backgroundColor=ffdfbf`}
+                  alt={selectedUserProfile.name}
+                  className="w-full h-full rounded-full object-cover border-4 border-[#111a22]"
+                />
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-1">{selectedUserProfile.name}</h3>
+              <p className="text-accent-lime text-xs font-bold uppercase tracking-widest mb-6">Live Tracking</p>
+
+              <div className="w-full space-y-3">
+                <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-white/40">pin_drop</span>
+                  <div className="text-left">
+                    <div className="text-[10px] text-white/30 uppercase font-bold">Location</div>
+                    <div className="text-sm text-white font-mono">{selectedUserProfile.lat?.toFixed(4)}, {selectedUserProfile.lng?.toFixed(4)}</div>
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-white/40">sensors</span>
+                  <div className="text-left">
+                    <div className="text-[10px] text-white/30 uppercase font-bold">Status</div>
+                    <div className="text-sm text-green-400 font-bold flex items-center gap-1">
+                      <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Online
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full mt-6">
+                <button
+                  className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
+                  onClick={() => setSelectedUserProfile(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
