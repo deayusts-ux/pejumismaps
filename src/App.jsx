@@ -876,7 +876,7 @@ function App() {
                   <img
                     alt="My Avatar"
                     className="w-full h-full rounded-full object-cover border-2 border-[#111a22]"
-                    src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}
+                    src={profileImage || `https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}
                   />
                   {isSharing && (
                     <div className="absolute -bottom-1 -right-1 bg-[#111a22] rounded-full p-1 border border-white/10 flex items-center justify-center">
