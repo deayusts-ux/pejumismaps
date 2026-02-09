@@ -37,11 +37,28 @@ function App() {
   const [phoneNumber, setPhoneNumber] = useState(() => localStorage.getItem('zenmap_phone') || '');
   const [userName, setUserName] = useState(() => localStorage.getItem('zenmap_username') || '');
 
-  // Persist User Credentials
+  const [profileImage, setProfileImage] = useState(() => localStorage.getItem('zenmap_avatar'));
+  const fileInputRef = useRef(null);
+
+  // Persist User Credentials and Avatar
   useEffect(() => {
     localStorage.setItem('zenmap_phone', phoneNumber);
     localStorage.setItem('zenmap_username', userName);
-  }, [phoneNumber, userName]);
+    if (profileImage) {
+      localStorage.setItem('zenmap_avatar', profileImage);
+    }
+  }, [phoneNumber, userName, profileImage]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const [isTracking, setIsTracking] = useState(false);
   const [userLocation, setUserLocation] = useState({ lat: -6.2088, lng: 106.8456 }); // Jakarta
@@ -1186,9 +1203,7 @@ function App() {
                 <p className="text-slate-400">Manage your public identity and map preferences</p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
-                  <span className="material-symbols-outlined text-white">search</span>
-                </div>
+
                 <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
                   <span className="material-symbols-outlined text-white">dark_mode</span>
                 </div>
@@ -1201,11 +1216,21 @@ function App() {
                 <div className="flex flex-col items-center flex-shrink-0 w-full lg:w-auto">
                   <div className="relative group">
                     <div className="w-48 h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
-                      <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4')` }}></div>
+                      <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${profileImage || `https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}')` }}></div>
                     </div>
-                    <button className="absolute bottom-2 right-2 w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-2 right-2 w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all"
+                    >
                       <span className="material-symbols-outlined text-2xl">photo_camera</span>
                     </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
                   </div>
                   <div className="mt-6 text-center">
                     <h3 className="font-bold text-white text-lg">{userName || 'Anonymous'}</h3>
