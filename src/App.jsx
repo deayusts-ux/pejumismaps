@@ -3,6 +3,7 @@ import QRCode from "react-qr-code";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import mqtt from 'mqtt'; // MQTT for Real-time Tracking
+import EmojiPicker from 'emoji-picker-react';
 
 // Fix Leaflet Default Icon Issues
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -113,6 +114,11 @@ function App() {
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'chat'
   const [messageInput, setMessageInput] = useState('');
   const messagesEndRef = useRef(null); // Auto-scroll to bottom
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const onEmojiClick = (emojiObject) => {
+    setMessageInput(prev => prev + emojiObject.emoji);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -201,6 +207,11 @@ function App() {
     userNameRef.current = userName;
   }, [userName]);
 
+  const profileImageRef = useRef(profileImage);
+  useEffect(() => {
+    profileImageRef.current = profileImage;
+  }, [profileImage]);
+
   // MQTT Connection & Handling
   useEffect(() => {
     if (!roomId) return;
@@ -240,7 +251,8 @@ function App() {
           const joinPayload = JSON.stringify({
             type: 'join',
             id: myId,
-            name: nameToSend
+            name: nameToSend,
+            avatar: profileImageRef.current // Send Avatar on Join
           });
           mqttClient.publish(`zenmap/${roomId}/${myId}`, joinPayload, { qos: 0 });
         } else {
@@ -283,7 +295,8 @@ function App() {
               lat: userLocationRef.current.lat,
               lng: userLocationRef.current.lng,
               name: nameToSend,
-              avatarSeed: myId
+              avatarSeed: myId,
+              avatar: profileImageRef.current // Send Avatar on Reply
             });
             // Publish immediately (response)
             mqttClient.publish(`zenmap/${roomId}/${myId}`, replyPayload, { retain: true, qos: 0 });
@@ -320,9 +333,12 @@ function App() {
         // SAFETY CHECK: Ensure payload has valid coordinates to prevent Map Crash
         if (!payload.lat || !payload.lng) return;
 
+        if (!payload.lat || !payload.lng) return;
+
         setOtherUsers(prev => ({
           ...prev,
           [senderId]: {
+            ...prev[senderId], // MERGE with existing data to keep avatar if not in payload
             ...payload,
             lastSeen: Date.now()
           }
@@ -485,11 +501,27 @@ function App() {
   // New Hook for manual view control
   const MapController = ({ center, zoom, shouldFollow }) => {
     const map = useMap();
+    const lastCenter = useRef(null);
+
     useEffect(() => {
       if (shouldFollow) {
-        map.flyTo(center, zoom, { duration: 1.5 });
+        const [lat, lng] = center;
+        // Only move if center actually changed significantly (> 0.0001 degrees)
+        // This prevents micro-jitters from GPS noise or re-renders
+        if (!lastCenter.current || Math.abs(lastCenter.current[0] - lat) > 0.00005 || Math.abs(lastCenter.current[1] - lng) > 0.00005) {
+          map.flyTo(center, map.getZoom(), { duration: 1.5, easeLinearity: 0.25 });
+          lastCenter.current = center;
+        }
       }
-    }, [center, zoom, map, shouldFollow]);
+    }, [center, map, shouldFollow]); // Removed zoom dependency to prevent zoom resetting during pan
+
+    // Separate effect for Zoom changes to avoid conflicts
+    useEffect(() => {
+      if (Math.abs(map.getZoom() - zoom) > 0.5 && shouldFollow) {
+        map.setZoom(zoom);
+      }
+    }, [zoom, map, shouldFollow]);
+
     return null;
   };
 
@@ -819,13 +851,21 @@ function App() {
                 position={[user.lat, user.lng]}
                 icon={L.divIcon({
                   className: 'custom-peer-icon',
-                  html: `<div class="relative w-full h-full flex items-center justify-center">
-                          <div class="absolute inset-0 bg-orange-500/30 rounded-full animate-ping"></div>
-                          <div class="absolute inset-0 bg-orange-500/20 rounded-full animate-pulse"></div>
-                          <div class="relative w-12 h-12 rounded-full border-2 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)] overflow-hidden bg-black">
-                            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf" class="w-full h-full object-cover" />
+                  html: `<div class="relative w-full h-full flex items-center justify-center group">
+                          <!-- Animated Rings -->
+                          <div class="absolute inset-0 bg-blue-500/30 rounded-full animate-ping delay-75"></div>
+                          <div class="absolute inset-0 bg-cyan-400/20 rounded-full animate-pulse"></div>
+                          
+                          <!-- Spinning Border -->
+                          <div class="absolute -inset-1 rounded-full bg-gradient-to-tr from-transparent via-blue-500 to-cyan-400 animate-spin opacity-70" style="animation-duration: 3s;"></div>
+                          
+                          <!-- Avatar Container -->
+                          <div class="relative w-12 h-12 rounded-full border-[3px] border-slate-900 overflow-hidden bg-slate-900 z-10 shadow-lg">
+                            <img src="${user.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`}" class="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110" />
                           </div>
-                          <div class="absolute -bottom-2 bg-black/80 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-500/50 shadow-sm whitespace-nowrap">
+                          
+                          <!-- Name Tag -->
+                          <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-sm text-cyan-300 text-[10px] font-bold px-2.5 py-1 rounded-full border border-cyan-500/30 shadow-lg whitespace-nowrap z-20 transition-all duration-300 group-hover:-bottom-5 group-hover:scale-105">
                             ${user.name}
                           </div>
                         </div>`,
@@ -839,7 +879,7 @@ function App() {
                     onClick={() => setSelectedUserProfile({ id, ...user })}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} className="w-8 h-8 rounded-full bg-gray-100" />
+                      <img src={user.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} className="w-8 h-8 rounded-full bg-gray-100 object-cover" />
                       <div>
                         <strong className="block text-sm leading-tight text-blue-600 hover:underline">{user.name}</strong>
                         <span className="text-orange-500 font-bold text-[10px] uppercase tracking-wider">Click to view profile</span>
@@ -1014,7 +1054,7 @@ function App() {
                         >
                           <div className="relative">
                             <div className="size-10 rounded-full p-0.5 bg-gradient-to-tr from-orange-400 to-red-500">
-                              <img alt={user.name} className="w-full h-full rounded-full object-cover border border-[#111a22]" src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} />
+                              <img alt={user.name} className="w-full h-full rounded-full object-cover border border-[#111a22]" src={user.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}&backgroundColor=ffdfbf`} />
                             </div >
                             <div className="absolute -bottom-1 -right-1 bg-[#111a22] rounded-full p-0.5 border border-white/10 flex items-center justify-center">
                               <span className="material-symbols-outlined text-[10px] text-green-400 animate-pulse">circle</span>
@@ -1108,12 +1148,37 @@ function App() {
                     {isSharing ? 'Stop Broadcasting' : 'Share Live Location'}
                   </button>
                 ) : (
-                  <form onSubmit={sendMessage} className="flex gap-2 relative">
+                  <form onSubmit={sendMessage} className="flex gap-2 relative items-center">
+                    {/* Emoji Picker Popover */}
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+                        <EmojiPicker
+                          onEmojiClick={onEmojiClick}
+                          theme="dark"
+                          width={300}
+                          height={400}
+                          searchDisabled={false}
+                          skinTonesDisabled
+                          previewConfig={{ showPreview: false }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`size-11 rounded-xl flex items-center justify-center border border-white/5 transition-all active:scale-95 ${showEmojiPicker ? 'bg-primary text-white shadow-glow-primary' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+                      title="Add Emoji"
+                    >
+                      <span className="material-symbols-outlined text-xl">sentiment_satisfied</span>
+                    </button>
+
                     <input
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
                       placeholder="Type a message..."
                       className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:bg-white/10 focus:border-primary focus:outline-none placeholder-white/20 transition-all font-medium"
+                      onClick={() => setShowEmojiPicker(false)}
                     />
                     <button
                       type="submit"
@@ -1226,255 +1291,262 @@ function App() {
             </div >
           </div >
         </div >
-      )}
-      {currentView === 'settings' && (
-        <div className="relative w-full h-full bg-background-dark overflow-hidden flex shadow-2xl border border-white/5 font-display text-slate-100">
-          {/* Background Effects */}
-          <div className="absolute inset-0 map-grid-bg pointer-events-none opacity-40"></div>
-          <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]"></div>
+      )
+      }
+      {
+        currentView === 'settings' && (
+          <div className="relative w-full h-full bg-background-dark overflow-hidden flex shadow-2xl border border-white/5 font-display text-slate-100">
+            {/* Background Effects */}
+            <div className="absolute inset-0 map-grid-bg pointer-events-none opacity-40"></div>
+            <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]"></div>
+            <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]"></div>
 
-          {/* Sidebar (Desktop) */}
-          {/* Sidebar (Desktop Only) */}
-          <aside className="hidden lg:flex relative z-20 w-80 border-r border-glass-border glass-effect flex-col">
-            <div className="p-10">
-              <div className="flex items-center gap-3 mb-12">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center neon-shadow">
-                  <span className="material-symbols-outlined text-white">explore</span>
+            {/* Sidebar (Desktop) */}
+            {/* Sidebar (Desktop Only) */}
+            <aside className="hidden lg:flex relative z-20 w-80 border-r border-glass-border glass-effect flex-col">
+              <div className="p-10">
+                <div className="flex items-center gap-3 mb-12">
+                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center neon-shadow">
+                    <span className="material-symbols-outlined text-white">explore</span>
+                  </div>
+                  <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">PEJUMISMAPS</span>
                 </div>
-                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">PEJUMISMAPS</span>
+                <nav className="space-y-4">
+                  <button
+                    onClick={() => setCurrentView('map')}
+                    className="w-full flex items-center gap-4 px-6 py-4 mb-8 text-slate-300 hover:text-white hover:bg-white/5 border border-glass-border rounded-xl transition-all group"
+                  >
+                    <span className="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+                    <span className="font-bold tracking-wide uppercase text-sm">Back to Map</span>
+                  </button>
+                  <div className="h-px bg-glass-border mb-6"></div>
+                  <button className="w-full sidebar-link-active flex items-center gap-4 px-6 py-4 rounded-r-xl transition-all text-left">
+                    <span className="material-symbols-outlined">person</span>
+                    <span className="font-medium">Account</span>
+                  </button>
+                </nav>
               </div>
-              <nav className="space-y-4">
+              <div className="mt-auto p-10">
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to logout?')) {
+                      localStorage.removeItem('zenmap_username');
+                      window.location.reload();
+                    }
+                  }}
+                  className="flex items-center gap-4 px-6 py-4 text-slate-500 hover:text-red-400 transition-all"
+                >
+                  <span className="material-symbols-outlined">logout</span>
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="relative z-10 flex-1 overflow-y-auto bg-transparent flex flex-col hide-scrollbar">
+              {/* Mobile Navigation Header */}
+              <div className="lg:hidden flex items-center justify-between px-6 py-6 border-b border-glass-border bg-glass-dark backdrop-blur-md sticky top-0 z-30">
                 <button
                   onClick={() => setCurrentView('map')}
-                  className="w-full flex items-center gap-4 px-6 py-4 mb-8 text-slate-300 hover:text-white hover:bg-white/5 border border-glass-border rounded-xl transition-all group"
+                  className="size-10 flex items-center justify-center rounded-full bg-white/5 text-white active:scale-95"
                 >
-                  <span className="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
-                  <span className="font-bold tracking-wide uppercase text-sm">Back to Map</span>
+                  <span className="material-symbols-outlined">arrow_back</span>
                 </button>
-                <div className="h-px bg-glass-border mb-6"></div>
-                <button className="w-full sidebar-link-active flex items-center gap-4 px-6 py-4 rounded-r-xl transition-all text-left">
-                  <span className="material-symbols-outlined">person</span>
-                  <span className="font-medium">Account</span>
+                <span className="font-bold text-lg">My Profile</span>
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to logout?')) {
+                      localStorage.removeItem('zenmap_username');
+                      window.location.reload();
+                    }
+                  }}
+                  className="size-10 flex items-center justify-center rounded-full bg-red-500/10 text-red-400 active:scale-95"
+                >
+                  <span className="material-symbols-outlined">logout</span>
                 </button>
-              </nav>
-            </div>
-            <div className="mt-auto p-10">
-              <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to logout?')) {
-                    localStorage.removeItem('zenmap_username');
-                    window.location.reload();
-                  }
-                }}
-                className="flex items-center gap-4 px-6 py-4 text-slate-500 hover:text-red-400 transition-all"
-              >
-                <span className="material-symbols-outlined">logout</span>
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          </aside>
-
-          {/* Main Content */}
-          <main className="relative z-10 flex-1 overflow-y-auto bg-transparent flex flex-col hide-scrollbar">
-            {/* Mobile Navigation Header */}
-            <div className="lg:hidden flex items-center justify-between px-6 py-6 border-b border-glass-border bg-glass-dark backdrop-blur-md sticky top-0 z-30">
-              <button
-                onClick={() => setCurrentView('map')}
-                className="size-10 flex items-center justify-center rounded-full bg-white/5 text-white active:scale-95"
-              >
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-              <span className="font-bold text-lg">My Profile</span>
-              <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to logout?')) {
-                    localStorage.removeItem('zenmap_username');
-                    window.location.reload();
-                  }
-                }}
-                className="size-10 flex items-center justify-center rounded-full bg-red-500/10 text-red-400 active:scale-95"
-              >
-                <span className="material-symbols-outlined">logout</span>
-              </button>
-            </div>
-
-            <header className="hidden lg:flex items-center justify-between px-16 py-10">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Profile Settings</h2>
-                <p className="text-slate-400">Manage your public identity and map preferences</p>
               </div>
-              <div className="flex items-center gap-4">
 
-                <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
-                  <span className="material-symbols-outlined text-white">dark_mode</span>
+              <header className="hidden lg:flex items-center justify-between px-16 py-10">
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">Profile Settings</h2>
+                  <p className="text-slate-400">Manage your public identity and map preferences</p>
                 </div>
-              </div>
-            </header>
+                <div className="flex items-center gap-4">
 
-            <div className="px-6 py-6 lg:px-16 lg:pb-16">
-              <div className="max-w-4xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-16 items-start">
-                {/* Profile Card */}
-                <div className="flex flex-col items-center flex-shrink-0 w-full lg:w-auto">
-                  <div className="relative group">
-                    <div className="w-32 h-32 lg:w-48 lg:h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
-                      <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${profileImage || `https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}')` }}></div>
-                    </div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 w-10 h-10 lg:w-12 lg:h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-lg lg:text-2xl">photo_camera</span>
-                    </button>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                    />
-                  </div>
-                  <div className="mt-4 lg:mt-6 text-center">
-                    <h3 className="font-bold text-white text-lg">{userName || 'Anonymous'}</h3>
-                    <p className="text-primary text-sm font-semibold tracking-wider uppercase mt-1">Digital Explorer</p>
+                  <div className="w-12 h-12 rounded-full border border-glass-border flex items-center justify-center glass-effect cursor-pointer hover:bg-white/5 transition-all">
+                    <span className="material-symbols-outlined text-white">dark_mode</span>
                   </div>
                 </div>
+              </header>
 
-                {/* Form Fields */}
-                <div className="flex-1 w-full space-y-8">
-                  <div className="grid grid-cols-1 gap-8">
-                    <div className="flex flex-col gap-3">
-                      <label className="px-2 text-sm font-medium text-slate-300">Display Name</label>
-                      <div className="relative flex items-center">
-                        <div className="absolute left-5 text-primary">
-                          <span className="material-symbols-outlined">person</span>
-                        </div>
-                        <input
-                          className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500"
-                          placeholder="Enter your display name"
-                          type="text"
-                          value={userName}
-                          onChange={(e) => setUserName(e.target.value)}
-                        />
+              <div className="px-6 py-6 lg:px-16 lg:pb-16">
+                <div className="max-w-4xl mx-auto flex flex-col lg:flex-row gap-8 lg:gap-16 items-start">
+                  {/* Profile Card */}
+                  <div className="flex flex-col items-center flex-shrink-0 w-full lg:w-auto">
+                    <div className="relative group">
+                      <div className="w-32 h-32 lg:w-48 lg:h-48 rounded-full border-4 border-primary/20 p-2 flex items-center justify-center overflow-hidden glass-dark">
+                        <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${profileImage || `https://api.dicebear.com/9.x/avataaars/svg?seed=${myId}&backgroundColor=b6e3f4`}')` }}></div>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                      <label className="px-2 text-sm font-medium text-slate-300">Bio</label>
-                      <div className="relative flex flex-col">
-                        <div className="absolute left-5 top-5 text-primary">
-                          <span className="material-symbols-outlined">description</span>
-                        </div>
-                        <textarea
-                          className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500 min-h-[160px] resize-none"
-                          placeholder="Share your story..."
-                          defaultValue="Digital nomad and urban explorer. Mapping the hidden gems of Northern Europe. #explorer #pejumis"
-                        ></textarea>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-glass border border-glass-border rounded-2xl glass-effect gap-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-primary">visibility</span>
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold text-white">Public Profile</p>
-                          <p className="text-sm text-slate-400">Allow others to see your maps and pins</p>
-                        </div>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input defaultChecked className="sr-only peer" type="checkbox" />
-                        <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex justify-end pt-4 pb-20 lg:pb-0">
                       <button
-                        onClick={() => showToast("Profile changes saved!", "info")}
-                        className="w-full lg:w-auto px-10 py-4 lg:py-5 bg-primary text-white font-bold rounded-2xl neon-shadow hover:bg-blue-400 active:scale-95 transition-all flex items-center justify-center gap-3 sticky bottom-6 z-40 lg:relative lg:bottom-auto lg:z-auto shadow-xl lg:shadow-none"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 w-10 h-10 lg:w-12 lg:h-12 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background-dark neon-shadow hover:scale-110 hover:bg-blue-400 transition-all"
                       >
-                        <span className="material-symbols-outlined">save</span>
-                        Save Changes
+                        <span className="material-symbols-outlined text-lg lg:text-2xl">photo_camera</span>
                       </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
+                    </div>
+                    <div className="mt-4 lg:mt-6 text-center">
+                      <h3 className="font-bold text-white text-lg">{userName || 'Anonymous'}</h3>
+                      <p className="text-primary text-sm font-semibold tracking-wider uppercase mt-1">Digital Explorer</p>
+                    </div>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="flex-1 w-full space-y-8">
+                    <div className="grid grid-cols-1 gap-8">
+                      <div className="flex flex-col gap-3">
+                        <label className="px-2 text-sm font-medium text-slate-300">Display Name</label>
+                        <div className="relative flex items-center">
+                          <div className="absolute left-5 text-primary">
+                            <span className="material-symbols-outlined">person</span>
+                          </div>
+                          <input
+                            className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500"
+                            placeholder="Enter your display name"
+                            type="text"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-3">
+                        <label className="px-2 text-sm font-medium text-slate-300">Bio</label>
+                        <div className="relative flex flex-col">
+                          <div className="absolute left-5 top-5 text-primary">
+                            <span className="material-symbols-outlined">description</span>
+                          </div>
+                          <textarea
+                            className="w-full bg-glass border border-glass-border rounded-2xl py-5 pl-14 pr-6 text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none glass-effect transition-all placeholder:text-slate-500 min-h-[160px] resize-none"
+                            placeholder="Share your story..."
+                            defaultValue="Digital nomad and urban explorer. Mapping the hidden gems of Northern Europe. #explorer #pejumis"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-glass border border-glass-border rounded-2xl glass-effect gap-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-primary">visibility</span>
+                          </div>
+                          <div>
+                            <p className="text-base font-semibold text-white">Public Profile</p>
+                            <p className="text-sm text-slate-400">Allow others to see your maps and pins</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input defaultChecked className="sr-only peer" type="checkbox" />
+                          <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
+                      </div>
+
+                      <div className="flex justify-end pt-4 pb-20 lg:pb-0">
+                        <button
+                          onClick={() => showToast("Profile changes saved!", "info")}
+                          className="w-full lg:w-auto px-10 py-4 lg:py-5 bg-primary text-white font-bold rounded-2xl neon-shadow hover:bg-blue-400 active:scale-95 transition-all flex items-center justify-center gap-3 sticky bottom-6 z-40 lg:relative lg:bottom-auto lg:z-auto shadow-xl lg:shadow-none"
+                        >
+                          <span className="material-symbols-outlined">save</span>
+                          Save Changes
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="absolute bottom-16 right-16 opacity-[0.03] rotate-12 pointer-events-none select-none">
-              <span className="material-symbols-outlined text-[300px] text-primary">map</span>
-            </div>
-          </main>
-        </div>
-      )}
+              <div className="absolute bottom-16 right-16 opacity-[0.03] rotate-12 pointer-events-none select-none">
+                <span className="material-symbols-outlined text-[300px] text-primary">map</span>
+              </div>
+            </main>
+          </div>
+        )
+      }
 
       {/* Toast Notification Overlay */}
-      {toast && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-white/90 text-black'}`}>
-          <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'info'}</span>
-          <span className="font-medium">{toast.msg}</span>
-        </div>
-      )}
+      {
+        toast && (
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-500/90 text-white' : 'bg-white/90 text-black'}`}>
+            <span className="material-symbols-outlined text-xl">{toast.type === 'error' ? 'error' : 'info'}</span>
+            <span className="font-medium">{toast.msg}</span>
+          </div>
+        )
+      }
 
       {/* Selected User Profile Modal */}
-      {selectedUserProfile && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setSelectedUserProfile(null)}>
-          <div className="bg-glass-dark border border-glass-border p-8 rounded-3xl max-w-sm w-full relative shadow-2xl scale-100 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setSelectedUserProfile(null)}
-              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+      {
+        selectedUserProfile && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setSelectedUserProfile(null)}>
+            <div className="bg-glass-dark border border-glass-border p-8 rounded-3xl max-w-sm w-full relative shadow-2xl scale-100 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setSelectedUserProfile(null)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
 
-            <div className="flex flex-col items-center text-center">
-              <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-accent-lime to-green-600 mb-4 shadow-glow-sm">
-                <img
-                  src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${selectedUserProfile.avatarSeed}&backgroundColor=ffdfbf`}
-                  alt={selectedUserProfile.name}
-                  className="w-full h-full rounded-full object-cover border-4 border-[#111a22]"
-                />
-              </div>
-
-              <h3 className="text-2xl font-bold text-white mb-1">{selectedUserProfile.name}</h3>
-              <p className="text-accent-lime text-xs font-bold uppercase tracking-widest mb-6">Live Tracking</p>
-
-              <div className="w-full space-y-3">
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-white/40">pin_drop</span>
-                  <div className="text-left">
-                    <div className="text-[10px] text-white/30 uppercase font-bold">Location</div>
-                    <div className="text-sm text-white font-mono">{selectedUserProfile.lat?.toFixed(4)}, {selectedUserProfile.lng?.toFixed(4)}</div>
-                  </div>
+              <div className="flex flex-col items-center text-center">
+                <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-accent-lime to-green-600 mb-4 shadow-glow-sm">
+                  <img
+                    src={selectedUserProfile.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${selectedUserProfile.avatarSeed}&backgroundColor=ffdfbf`}
+                    alt={selectedUserProfile.name}
+                    className="w-full h-full rounded-full object-cover border-4 border-[#111a22]"
+                  />
                 </div>
 
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-white/40">sensors</span>
-                  <div className="text-left">
-                    <div className="text-[10px] text-white/30 uppercase font-bold">Status</div>
-                    <div className="text-sm text-green-400 font-bold flex items-center gap-1">
-                      <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
-                      Online
+                <h3 className="text-2xl font-bold text-white mb-1">{selectedUserProfile.name}</h3>
+                <p className="text-accent-lime text-xs font-bold uppercase tracking-widest mb-6">Live Tracking</p>
+
+                <div className="w-full space-y-3">
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-white/40">pin_drop</span>
+                    <div className="text-left">
+                      <div className="text-[10px] text-white/30 uppercase font-bold">Location</div>
+                      <div className="text-sm text-white font-mono">{selectedUserProfile.lat?.toFixed(4)}, {selectedUserProfile.lng?.toFixed(4)}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-white/40">sensors</span>
+                    <div className="text-left">
+                      <div className="text-[10px] text-white/30 uppercase font-bold">Status</div>
+                      <div className="text-sm text-green-400 font-bold flex items-center gap-1">
+                        <span className="size-2 bg-green-500 rounded-full animate-pulse"></span>
+                        Online
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3 w-full mt-6">
-                <button
-                  className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
-                  onClick={() => setSelectedUserProfile(null)}
-                >
-                  Close
-                </button>
+                <div className="flex gap-3 w-full mt-6">
+                  <button
+                    className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
+                    onClick={() => setSelectedUserProfile(null)}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 
